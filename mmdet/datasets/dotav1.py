@@ -38,11 +38,11 @@ class DOTADatasetV1(CustomDataset):
         ann_files = glob.glob(ann_folder + '/*.txt')
         data_infos = []
         if not ann_files:  # test phase, use image folder as ann_folder to generate pseudo annotations
-            ann_files = glob.glob(ann_folder + '/*.png')
+            ann_files = glob.glob(ann_folder + '/*.tif')
             for ann_file in ann_files:
                 data_info = dict()
                 img_id = osp.split(ann_file)[1][:-4]
-                img_name = img_id + '.png'
+                img_name = img_id + '.tif'
                 data_info['filename'] = img_name
                 data_info['ann'] = dict()
                 data_info['ann']['bboxes'] = []
@@ -52,7 +52,7 @@ class DOTADatasetV1(CustomDataset):
             for ann_file in ann_files:
                 data_info = dict()
                 img_id = osp.split(ann_file)[1][:-4]
-                img_name = img_id + '.png'
+                img_name = img_id + '.tif'
                 data_info['filename'] = img_name
                 data_info['ann'] = dict()
                 gt_bboxes = []
@@ -64,9 +64,9 @@ class DOTADatasetV1(CustomDataset):
 
                 with open(ann_file) as f:
                     s = f.readlines()
-                    gsd = s[1].split(':')[-1]
-                    data_info['gsd'] = float(gsd) if gsd != 'null\n' else None
-                    s = s[2:]
+                    # gsd = s[1].split(':')[-1]
+                    # data_info['gsd'] = float(gsd) if gsd != 'null\n' else None
+                    # s = s[2:]
                     for si in s:
                         bbox_info = si.split()
                         bbox = bbox_info[:8]
@@ -131,7 +131,7 @@ class DOTADatasetV1(CustomDataset):
 
                 data_infos.append(data_info)
 
-        self.img_ids = [*map(lambda x: x['filename'][:-4], data_infos)]
+        self.img_names = [*map(lambda x: x['filename'][:-4], data_infos)]
         return data_infos
 
     def _filter_imgs(self):
@@ -190,8 +190,9 @@ class DOTADatasetV1(CustomDataset):
 
     def _det2str(self, results):
         mcls_results = {cls: '' for cls in self.CLASSES}
+        mcls_results_with_cls = {cls: '' for cls in self.CLASSES}
         for idx in range(len(self)):
-            img_id = self.img_ids[idx]
+            img_id = self.img_names[idx]+'.tif'
             result = results[idx]
             for label in range(len(result)):
                 bboxes = rdets2points(result[label])
@@ -202,17 +203,35 @@ class DOTADatasetV1(CustomDataset):
                     score = float(bboxes[i][-1])
                     resstr = resstr.format(img_id, score, *ps)
                     mcls_results[cls_name] += resstr
-        return mcls_results
+                    resstr_with_cls = '{:s} {:s} {:.4f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}\n'
+                    resstr_with_cls = resstr_with_cls.format(img_id, cls_name, score, *ps)
+                    mcls_results_with_cls[cls_name] += resstr_with_cls
+
+        return mcls_results, mcls_results_with_cls
 
     def _results2submission(self, results, out_folder=None):
-        dota_results = self._det2str(results)
+        dota_results, _ = self._det2str(results)
         if out_folder is not None:
             os.makedirs(out_folder, exist_ok=True)
             for cls in dota_results:
-                fname = f'Task1_{cls}.txt'
+                fname = f'{cls}.txt'
                 fname = os.path.join(out_folder, fname)
                 with open(fname, 'w') as f:
                     f.write(dota_results[cls])
+        return dota_results
+    
+    def _results2submission_hj(self, results, out_folder=None, conf=0.3):
+        dota_results, dota_results_with_cls = self._det2str(results)
+        if out_folder is not None:
+            os.makedirs(out_folder, exist_ok=True)
+            fname_total = os.path.join(out_folder, 'result_total.txt')
+            for cls in dota_results:
+                fname = f'{cls}.txt'
+                fname = os.path.join(out_folder, fname)
+                with open(fname, 'w') as f:
+                    f.write(dota_results[cls])
+                with open(fname_total, 'a') as fp:
+                    fp.write(dota_results_with_cls[cls])
         return dota_results
 
     def format_results(self, results, submission_dir=None, **kwargs):
@@ -237,5 +256,9 @@ class DOTADatasetV1(CustomDataset):
             submission_dir = tempfile.TemporaryDirectory()
         else:
             tmp_dir = None
-        result_files = self._results2submission(results, submission_dir)
+        result_files = self._results2submission_hj(results, submission_dir)
         return result_files, tmp_dir
+
+@DATASETS.register_module()
+class HJ(DOTADatasetV1):
+    CLASSES = ('1', '2', '3', '4', '5')

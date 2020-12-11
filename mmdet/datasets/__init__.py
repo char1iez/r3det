@@ -10,7 +10,7 @@ from .samplers import DistributedGroupSampler, DistributedSampler, GroupSampler
 from .voc import VOCDataset
 from .wider_face import WIDERFaceDataset
 from .xml_style import XMLDataset
-from .dotav1 import DOTADatasetV1
+from .dotav1 import DOTADatasetV1, HJ
 
 __all__ = [
     'CustomDataset', 'XMLDataset', 'CocoDataset', 'DeepFashionDataset',
@@ -20,5 +20,5 @@ __all__ = [
     'DistributedGroupSampler', 'DistributedSampler', 'build_dataloader',
     'ConcatDataset', 'RepeatDataset', 'ClassBalancedDataset',
     'WIDERFaceDataset', 'DATASETS', 'PIPELINES', 'build_dataset',
-    'DOTADatasetV1'
+    'DOTADatasetV1', 'HJ'
 ]

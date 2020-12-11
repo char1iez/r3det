@@ -13,11 +13,12 @@ class RResize(Resize):
     def __init__(self,
                  img_scale=None,
                  multiscale_mode='range',
-                 ratio_range=None):
+                 ratio_range=None,
+                 keep_ratio=True):
         super(RResize, self).__init__(img_scale=img_scale,
                                       multiscale_mode=multiscale_mode,
                                       ratio_range=ratio_range,
-                                      keep_ratio=True)
+                                      keep_ratio=keep_ratio,)
 
     def _resize_bboxes(self, results):
         for key in results.get('bbox_fields', []):
