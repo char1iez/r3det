@@ -1,5 +1,8 @@
 import random
 from collections import OrderedDict
+import os
+from pathlib import Path
+from zipfile import ZipFile
 
 import numpy as np
 import torch
@@ -36,6 +39,39 @@ class Statusbar(Hook):
 
     def after_iter(self, runner):
         self.statusbar[2] = runner.iter + 1
+
+
+@HOOKS.register_module()
+class ModelExport(Hook):
+
+    def __init__(self, work_dir,output):
+        self.work_dir = work_dir
+        self.output = output
+
+    def before_run(self, runner):
+        pass
+
+    def after_run(self, runner):
+        if self.output:
+            latest_cpt = os.path.join(self.work_dir, 'latest.pth')
+            model_config = os.path.join(self.work_dir, 'objdetrbox.py')
+            output_p = Path(self.output).parent
+            output_p.mkdir(parents=True, exist_ok=True)
+            with ZipFile(self.output, 'w') as zipfile:
+                zipfile.write(latest_cpt, arcname='model.pth')
+                zipfile.write(model_config, arcname='model.py')
+
+    def before_epoch(self, runner):
+        pass
+
+    def after_epoch(self, runner):
+        pass
+
+    def before_iter(self, runner):
+        pass
+
+    def after_iter(self, runner):
+        pass
 
 
 def set_random_seed(seed, deterministic=False):
@@ -109,6 +145,7 @@ def train_detector(model,
                    dataset,
                    cfg,
                    statusbar,
+                   output=None,
                    distributed=False,
                    validate=False,
                    timestamp=None,
@@ -203,6 +240,7 @@ def train_detector(model,
     statusbar[1] = cfg.total_epochs
     statusbar[-1] = len(data_loaders[0])
     runner.register_hook(Statusbar(statusbar))
+    runner.register_hook(ModelExport(cfg.work_dir, output))
 
     if cfg.resume_from:
         runner.resume(cfg.resume_from)

@@ -40,7 +40,10 @@ class Stream(Dataset):
         self.chip_size = chip_size
         self.stride = stride if stride is not None else chip_size // 4
         self.clip_stride = self.chip_size - self.stride
-        self.img_seq = [img for img in imgs.iterdir() if img.suffix in self.ext]
+        if imgs.is_dir():
+            self.img_seq = [img for img in imgs.iterdir() if img.suffix in self.ext]
+        else:
+            self.img_seq = [imgs] if imgs.suffix in self.ext else []
         self.idx_map = {}
         self.transforms = {}
         for img_idx, img in enumerate(self.img_seq):
